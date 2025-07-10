@@ -5,7 +5,6 @@ import connectDb from "./config/db.js";
 import authRouter from "./routes/auth.routes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import geminiResponse from "./gemIni.js";
 const app = express();
 app.use(express.json())
 app.use(cookieParser())
