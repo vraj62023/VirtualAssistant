@@ -10,7 +10,7 @@ app.use(express.json())
 app.use(cookieParser())
 dotenv.config();
 app.use(cors({
-    origin:"http://localhost:5173",
+    origin:"https://virtualassistantfrontend.onrender.com",
     credentials:true
 }));
 const port = process.env.PORT||5000;
