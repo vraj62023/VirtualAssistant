@@ -1,179 +1,185 @@
-import React, { useContext, useEffect, useState, useRef } from 'react'
-import { userDataContext } from '../context/UserContext'
-import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
-import ai from "../assets/ai.gif"
+import React, { useContext, useEffect, useState, useRef } from 'react';
+import { userDataContext } from '../context/UserContext';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import ai from "../assets/ai.gif";
 import { CgMenuRight } from "react-icons/cg";
-import userImage from "../assets/user.gif"
+import userImage from "../assets/user.gif";
 import { RxCross2 } from "react-icons/rx";
 
 function Home() {
-  const navigate = useNavigate()
-  const { userData, serverUrl, setUserData, getGeminiResponse } = useContext(userDataContext)
-  const [userText, setUserText] = useState("")
-  const [aiText, setAiText] = useState("")
-  const [ham, setHam] = useState(false)
-  const synth = window.speechSynthesis
+  const navigate = useNavigate();
+  const { userData, serverUrl, setUserData, getGeminiResponse } = useContext(userDataContext);
+  const [userText, setUserText] = useState("");
+  const [aiText, setAiText] = useState("");
+  const [ham, setHam] = useState(false);
+  const synth = window.speechSynthesis;
   const [listening, setListening] = useState(false);
-  const isSpeakingRef = useRef(false)
-  const recognitionRef = useRef(null)
-  const isRecognizingRef = useRef(false)
+  const isSpeakingRef = useRef(false);
+  const recognitionRef = useRef(null);
+  const isRecognizingRef = useRef(false);
+  const readyToStartRef = useRef(true); // ✅ NEW FLAG
 
   const handleLogOut = async () => {
     try {
-      await axios.get(`${serverUrl}/api/auth/logout`, { withCredentials: true })
-      setUserData(null)
-      navigate("/signin")
+      await axios.get(`${serverUrl}/api/auth/logout`, { withCredentials: true });
+      setUserData(null);
+      navigate("/signin");
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
-  }
+  };
 
   const startRecognition = () => {
     try {
-      recognitionRef.current?.start()
-      setListening(true)
+      recognitionRef.current?.start();
+      setListening(true);
     } catch (error) {
       if (!error.message.includes("start")) {
-        console.error("Recognition error:", error)
+        console.error("Recognition error:", error);
       }
     }
-  }
+  };
 
   const speak = (text) => {
-    const utterance = new SpeechSynthesisUtterance(text)
-    const voices = window.speechSynthesis.getVoices()
-    const englishVoice = voices.find(v => v.lang === 'en-IN')
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    const englishVoice = voices.find(v => v.lang === 'en-IN');
 
     if (englishVoice) {
-      utterance.voice = englishVoice
-      utterance.lang = englishVoice.lang
+      utterance.voice = englishVoice;
+      utterance.lang = englishVoice.lang;
     } else {
-      utterance.lang = 'en-US'
+      utterance.lang = 'en-US';
     }
 
-    isSpeakingRef.current = true
+    isSpeakingRef.current = true;
 
     utterance.onend = () => {
-      setAiText("")
-      isSpeakingRef.current = false
+      setAiText("");
+      isSpeakingRef.current = false;
+      readyToStartRef.current = true;
       setTimeout(() => {
-        startRecognition()
-      }, 500)
-    }
+        startRecognition();
+      }, 500);
+    };
 
-    console.log("🗣 Speaking:", text)
-    synth.speak(utterance)
-  }
+    console.log("🗣 Speaking:", text);
+    synth.speak(utterance);
+  };
 
   const handleCommand = (data) => {
-    const { type, userInput, response } = data
-    speak(response)
-    const query = encodeURIComponent(userInput)
+    const { type, userInput, response } = data;
+    speak(response);
+    const query = encodeURIComponent(userInput);
     switch (type) {
       case 'google_search':
-        window.open(`https://www.google.com/search?q=${query}`, '_blank')
-        break
+        window.open(`https://www.google.com/search?q=${query}`, '_blank');
+        break;
       case 'calculator_open':
-        window.open(`https://www.google.com/search?q=calculator`, '_blank')
-        break
+        window.open(`https://www.google.com/search?q=calculator`, '_blank');
+        break;
       case 'instagram_open':
-        window.open(`https://www.instagram.com/`, '_blank')
-        break
+        window.open(`https://www.instagram.com/`, '_blank');
+        break;
       case 'facebook_open':
-        window.open(`https://www.facebook.com/`, '_blank')
-        break
+        window.open(`https://www.facebook.com/`, '_blank');
+        break;
       case 'weather_show':
-        window.open(`https://www.google.com/search?q=weather`, '_blank')
-        break
+        window.open(`https://www.google.com/search?q=weather`, '_blank');
+        break;
       case 'youtube_search':
       case 'youtube_play':
-        window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank')
-        break
+        window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
+        break;
       default:
-        break
+        break;
     }
-  }
+  };
 
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    const recognition = new SpeechRecognition()
-    recognition.continuous = true
-    recognition.lang = 'en-US'
-    recognitionRef.current = recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.lang = 'en-US';
+    recognitionRef.current = recognition;
 
     const safeRecognition = () => {
-      if (!isSpeakingRef.current && !isRecognizingRef.current) {
+      if (!isSpeakingRef.current && !isRecognizingRef.current && readyToStartRef.current) {
         try {
-          recognition.start()
-          console.log("Recognition requested to start")
+          recognition.start();
+          readyToStartRef.current = false;
+          console.log("Recognition requested to start");
         } catch (error) {
           if (error.name !== "InvalidStateError") {
-            console.error("start error:", error)
+            console.error("start error:", error);
           }
         }
       }
-    }
+    };
 
     recognition.onstart = () => {
-      isRecognizingRef.current = true
-      setListening(true)
-    }
+      isRecognizingRef.current = true;
+      setListening(true);
+    };
 
     recognition.onend = () => {
-      isRecognizingRef.current = false
-      setListening(false)
+      isRecognizingRef.current = false;
+      setListening(false);
+      readyToStartRef.current = true;
       if (!isSpeakingRef.current) {
-        setTimeout(safeRecognition, 1000)
+        setTimeout(safeRecognition, 1000);
       }
-    }
+    };
 
     recognition.onerror = (event) => {
-      console.warn("Recognition error:", event.error)
-      isRecognizingRef.current = false
-      setListening(false)
+      console.warn("Recognition error:", event.error);
+      isRecognizingRef.current = false;
+      setListening(false);
+      readyToStartRef.current = true;
       if (event.error !== "aborted" && !isSpeakingRef.current) {
-        setTimeout(safeRecognition, 1000)
+        setTimeout(safeRecognition, 1000);
       }
-    }
+    };
 
     recognition.onresult = async (e) => {
-      const transcript = e.results[e.results.length - 1][0].transcript.trim()
+      const transcript = e.results[e.results.length - 1][0].transcript.trim();
       if (transcript.toLowerCase().includes(userData.assistantName.toLowerCase())) {
-        setAiText("")
-        setUserText(transcript)
+        setAiText("");
+        setUserText(transcript);
 
         try {
-          recognition.stop()
+          recognition.stop();
         } catch (e) {
-          console.warn("Recognition stop error:", e)
+          console.warn("Recognition stop error:", e);
         }
 
-        isRecognizingRef.current = false
-        setListening(false)
+        isRecognizingRef.current = false;
+        setListening(false);
+        readyToStartRef.current = true;
 
-        const data = await getGeminiResponse(transcript)
-        handleCommand(data)
-        setAiText(data.response)
-        setUserText("")
+        const data = await getGeminiResponse(transcript);
+        handleCommand(data);
+        setAiText(data.response);
+        setUserText("");
       }
-    }
+    };
 
     const fallback = setInterval(() => {
       if (!isSpeakingRef.current && !isRecognizingRef.current) {
-        safeRecognition()
+        safeRecognition();
       }
-    }, 10000)
+    }, 10000);
 
-    safeRecognition()
+    safeRecognition();
 
     return () => {
-      recognition.stop()
-      setListening(false)
-      isRecognizingRef.current = false
-      clearInterval(fallback)
-    }
-  }, [])
+      recognition.stop();
+      setListening(false);
+      isRecognizingRef.current = false;
+      clearInterval(fallback);
+    };
+  }, []);
 
   return (
     <div className='w-full min-h-[100vh] bg-gradient-to-t from-[black] to-[#030236] flex justify-center items-center flex-col gap-[10px] relative p-[15px] overflow-hidden'>
@@ -202,7 +208,7 @@ function Home() {
       {aiText ? <img src={ai} alt="" className='w-[200px]' /> : <img src={userImage} alt="" className='w-[200px]' />}
       <h1 className='text-white text-[18px] font-semibold text-wrap'>{userText || aiText || null}</h1>
     </div>
-  )
+  );
 }
 
-export default Home
+export default Home;
